@@ -1,64 +1,110 @@
-# Support Ticket Management System
+# Ticket Management System
 
-A full-stack support ticket management application built with the MERN stack. Teams can create and manage tickets, track status through a defined lifecycle, search and filter tickets, and collaborate via comments.
+A MERN-based helpdesk application for creating, tracking, and resolving support tickets. Operators can move work through a controlled status lifecycle, search and filter the queue, and collaborate with comments — all behind a layered Express API and a React single-page app.
 
-## Project Overview
+> **Quick start:** install dependencies in `server/` and `client/`, copy the `.env.example` files, start MongoDB, run `npm run seed` in `server/`, then `npm run dev` in both packages.
 
-This project is a support ticket management system designed for internal or customer-facing help desks. It provides:
+---
 
-- **Ticket CRUD** with soft delete
-- **Status lifecycle management** enforced by a server-side state machine
-- **Comments** on tickets with author validation
-- **Search and filtering** by keyword and status, with pagination
-- **Dashboard** with status summaries and recent activity
-- **React SPA** with loading states, error handling, and toast notifications
+## Table of contents
 
-The backend follows a layered MVC architecture (routes → controllers → services → models) with centralized validation and error handling. The frontend uses a service layer and reusable hooks for API interaction.
+1. [What this project does](#what-this-project-does)
+2. [System architecture](#system-architecture)
+3. [Capabilities](#capabilities)
+4. [Tech stack](#tech-stack)
+5. [Getting started](#getting-started)
+6. [Configuration](#configuration)
+7. [Database](#database)
+8. [Running the API](#running-the-api)
+9. [Running the UI](#running-the-ui)
+10. [Tests](#tests)
+11. [Demo seed data](#demo-seed-data)
+12. [Repository layout](#repository-layout)
+13. [Known gaps](#known-gaps)
+14. [Further reading](#further-reading)
 
-## Architecture
+---
+
+## What this project does
+
+This repository implements a **Support Ticket Management System** intended for assessment and local demos. It models a small internal helpdesk:
+
+| Area | Behavior |
+|------|----------|
+| Tickets | Create, view, edit, soft-delete |
+| Lifecycle | Server-enforced status transitions |
+| Collaboration | Comment threads on tickets |
+| Discovery | Keyword search, status/priority filters, sorting, pagination |
+| Operations view | Dashboard with status counts and recent tickets |
+
+The server keeps validation, domain rules, and persistence in separate layers. The client talks to the API through Axios services and reusable React hooks, with loading, error, and toast feedback on major flows.
+
+---
+
+## System architecture
+
+The application is a **monorepo** with two runtimes and one database:
 
 ```mermaid
-flowchart TB
-  subgraph client [React Client - Vite]
-    Pages[Pages]
-    Hooks[Hooks]
-    Services[Service Layer]
-    API[Axios HTTP Client]
-    Pages --> Hooks --> Services --> API
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "primaryColor": "#DEEBFF",
+    "primaryTextColor": "#172B4D",
+    "primaryBorderColor": "#0052CC",
+    "secondaryColor": "#E3FCEF",
+    "secondaryTextColor": "#172B4D",
+    "secondaryBorderColor": "#00875A",
+    "tertiaryColor": "#FFFAE6",
+    "tertiaryTextColor": "#172B4D",
+    "tertiaryBorderColor": "#FF991F",
+    "lineColor": "#42526E",
+    "fontFamily": "ui-sans-serif, system-ui, sans-serif"
+  }
+}}%%
+flowchart LR
+  subgraph UI["Client · React + Vite"]
+    direction TB
+    P["Pages & layouts"]
+    H["Hooks"]
+    S["Services + retry"]
+    X["Axios client"]
+    P --> H --> S --> X
   end
 
-  subgraph server [Express API]
-    Routes[Routes]
-    Controllers[Controllers]
-    Validators[express-validator]
-    Svc[Services]
-    Domain[Domain Logic]
-    Models[Mongoose Models]
-    Routes --> Validators --> Controllers --> Svc --> Models
-    Svc --> Domain
+  subgraph API["Server · Express"]
+    direction TB
+    R["Routes"]
+    V["Validators"]
+    C["Controllers"]
+    SV["Services"]
+    D["Domain<br/>state machine · query builder"]
+    M["Mongoose models"]
+    R --> V --> C --> SV --> M
+    SV --> D
   end
 
-  subgraph db [MongoDB]
-    Users[(users)]
-    Tickets[(tickets)]
-    Comments[(comments)]
+  subgraph DATA["MongoDB"]
+    U[(users)]
+    T[(tickets)]
+    CM[(comments)]
   end
 
-  API -->|REST /api| Routes
-  Models --> Users
-  Models --> Tickets
-  Models --> Comments
+  X -->|"REST JSON · /api"| R
+  M --> U
+  M --> T
+  M --> CM
 ```
 
-### Request flow
+### How a request moves through the stack
 
-1. The React app calls the API through `client/src/services/` (with optional retries on transient failures).
-2. Express routes validate input via `express-validator` middleware.
-3. Controllers delegate to service functions for business logic.
-4. Services interact with Mongoose models and enforce rules (e.g. status transitions).
-5. Errors are normalized by a global error handler into a consistent JSON envelope.
+1. The SPA calls a method in `client/src/services/` (transient network/5xx failures may be retried).
+2. Express matches a route and runs `express-validator` chains.
+3. The controller forwards to a service — controllers stay thin.
+4. Services apply business rules (including the status state machine) and talk to Mongoose.
+5. Failures are mapped by a global handler into one JSON error shape.
 
-### Error response format
+### Standard error envelope
 
 ```json
 {
@@ -72,93 +118,99 @@ flowchart TB
 }
 ```
 
-## Features
+Common codes include `VALIDATION_ERROR`, `NOT_FOUND`, and `INVALID_TRANSITION` (`409` when a status change is not allowed).
 
-### Core
+---
 
-| Feature | Description |
-|---------|-------------|
-| Ticket CRUD | Create, read, update, and soft-delete tickets |
-| Status state machine | `open → in_progress → resolved → closed`; `open/in_progress → cancelled` |
-| Comments | List and add comments on active tickets |
-| Search | Full-text search on title and description (case-insensitive) |
-| Filtering | Filter tickets by status; combine with search |
-| Pagination | Page/limit query params with total count metadata |
-| Validation | Server-side field validation for tickets, comments, and queries |
-| Error handling | Custom error classes, 404 handler, MongoDB error mapping |
-| Dashboard | Status summary cards and recent tickets table |
-| Seed data | Reusable script to populate demo users, tickets, and comments |
+## Capabilities
 
-### Ticket status transitions
+### Included in core scope
+
+| Capability | Notes |
+|------------|--------|
+| Ticket CRUD | Soft delete via `deletedAt`; deleted rows are excluded from lists and return `404` on direct fetch |
+| Status state machine | Dedicated `PATCH /api/tickets/:id/status` endpoint |
+| Comments | Nested under tickets; author must be a valid user |
+| Search | MongoDB text index on title/description; regex fallback for special characters |
+| Filters & sort | Status, priority, plus `sortBy` / `sortOrder` on the list API and UI |
+| Pagination | `page` / `limit` with `total` and `totalPages` |
+| Validation | Shared field validators for writes and list query params |
+| Errors & logging | Typed errors, 404 handler, Mongoose error mapping, request logging |
+| Dashboard | Status summary cards and a recent-tickets table |
+| Seed script | Deterministic demo users, tickets, and comments |
+
+### Allowed status transitions
 
 ```
-open        → in_progress, cancelled
-in_progress → resolved, cancelled
-resolved    → closed
-closed      → (terminal)
-cancelled   → (terminal)
+open         →  in_progress , cancelled
+in_progress  →  resolved    , cancelled
+resolved     →  closed
+closed       →  (end state)
+cancelled    →  (end state)
 ```
 
-Invalid transitions return `409 Conflict` with a descriptive message.
+Anything outside this map is rejected with **409 Conflict** and a readable explanation.
 
-### Stretch (scaffolded, not implemented)
+### Stretch (scaffolded only)
 
-- JWT authentication and protected routes
-- Role-based access control (RBAC)
-- Login page UI stub at `/login`
+- JWT login and protected routes  
+- Role-based access control (roles exist on users but are not enforced)  
+- `/login` page stub in the client  
 
-## Installation
+---
+
+## Tech stack
+
+| Layer | Choices |
+|-------|---------|
+| Data | MongoDB · Mongoose |
+| API | Node.js · Express · express-validator |
+| UI | React 18 · React Router · Vite |
+| HTTP | Axios (+ small retry helper) |
+| Tests | Jest · Supertest · Vitest · Testing Library · mongodb-memory-server |
+| Local DX | nodemon |
+
+---
+
+## Getting started
 
 ### Prerequisites
 
-- **Node.js** 18+ (20+ recommended)
-- **npm** 9+
-- **MongoDB** 6+ running locally, or a MongoDB Atlas connection string
+- Node.js **18+** (20+ preferred)  
+- npm **9+**  
+- MongoDB **6+** (local process or Atlas URI)
 
-### Steps
+### Install
 
-1. **Clone the repository**
+```bash
+git clone https://github.com/Anuragmalhotra/ticket-management-system.git
+cd ticket-management-system
 
-   ```bash
-   git clone <repository-url>
-   cd ticket-management-application
-   ```
+cd server && npm install
+cd ../client && npm install
+```
 
-2. **Install server dependencies**
+Next: create env files ([Configuration](#configuration)), start MongoDB, seed data, then run API and UI.
 
-   ```bash
-   cd server
-   npm install
-   ```
+---
 
-3. **Install client dependencies**
+## Configuration
 
-   ```bash
-   cd ../client
-   npm install
-   ```
-
-4. **Configure environment variables** (see below)
-
-## Environment Variables
-
-### Server (`server/.env`)
-
-Copy the example file and adjust values as needed:
+### Server — `server/.env`
 
 ```bash
 cd server
 cp .env.example .env
 ```
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `PORT` | No | `5000` | API server port |
-| `NODE_ENV` | No | `development` | Environment (`development`, `test`, `production`) |
-| `MONGODB_URI` | **Yes** | — | MongoDB connection string |
-| `CLIENT_URL` | No | `http://localhost:5173` | Allowed CORS origin |
-| `JWT_SECRET` | No | — | JWT signing secret (stretch feature) |
-| `JWT_EXPIRES_IN` | No | `24h` | JWT expiry (stretch feature) |
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `PORT` | No | `5000` | HTTP listen port |
+| `NODE_ENV` | No | `development` | `development` / `test` / `production` |
+| `MONGODB_URI` | **Yes** | — | Mongo connection string |
+| `CLIENT_URL` | No | `http://localhost:5173` | CORS allowlist origin |
+| `JWT_SECRET` | No | — | Reserved for stretch auth |
+| `JWT_EXPIRES_IN` | No | `24h` | Reserved for stretch auth |
 
 Example:
 
@@ -169,95 +221,92 @@ MONGODB_URI=mongodb://localhost:27017/ticket-management
 CLIENT_URL=http://localhost:5173
 ```
 
-### Client (`client/.env`)
+> **Port tip (macOS):** AirPlay Receiver often binds **5000**. If the API fails with `EADDRINUSE`, set `PORT=5001` (or another free port) and point the Vite proxy / `VITE_API_URL` at the same host:port.
+
+### Client — `client/.env`
 
 ```bash
 cd client
 cp .env.example .env
 ```
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `VITE_API_URL` | No | — | API base URL (optional; dev proxy handles `/api`) |
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `VITE_API_URL` | No | — | Absolute API base (e.g. `http://localhost:5000/api`) |
 
-In development, Vite proxies `/api` requests to `http://localhost:5000`, so the client works without setting `VITE_API_URL`.
+In local development, Vite can proxy `/api` to the Express server (see `client/vite.config.js`), so `VITE_API_URL` is optional as long as the proxy target matches your API port. Production builds should set `VITE_API_URL` or sit behind a reverse proxy.
 
-## Database Setup
+---
 
-1. **Start MongoDB** locally or use a cloud instance.
+## Database
+
+1. Start MongoDB:
 
    ```bash
-   # macOS (Homebrew)
+   # Homebrew (macOS)
    brew services start mongodb-community
 
-   # Or run mongod directly
+   # Or
    mongod --dbpath /path/to/data
    ```
 
-2. **Set `MONGODB_URI`** in `server/.env`:
+2. Confirm `MONGODB_URI` in `server/.env`.
 
-   ```env
-   MONGODB_URI=mongodb://localhost:27017/ticket-management
-   ```
-
-3. **Seed the database** with demo data:
+3. Load demo data:
 
    ```bash
    cd server
    npm run seed
    ```
 
-   The seed script clears existing users, tickets, and comments, then inserts fresh demo data. It is safe to re-run during development.
+The seed run **clears** existing users, tickets, and comments, then inserts a fresh deterministic set. Re-run anytime during development.
 
-MongoDB indexes are defined on the Mongoose schemas (text search on title/description, compound indexes for list queries). Indexes are created automatically when the server starts.
+Indexes (text search, list/filter compounds, etc.) are declared on the Mongoose schemas and are created when the app connects. Integration tests call `syncIndexes()` so in-memory MongoDB has the same indexes.
 
-## Running Backend
+---
+
+## Running the API
 
 ```bash
 cd server
-
-# Development (with nodemon hot-reload)
-npm run dev
-
-# Production
-npm start
+npm run dev      # nodemon
+# or
+npm start        # plain node
 ```
 
-The API runs at **http://localhost:5000**.
+| Item | Value |
+|------|--------|
+| Base URL | `http://localhost:5000` (or your `PORT`) |
+| Health | `GET /health` → `{ "status": "ok" }` |
+| API prefix | `/api` |
 
-Health check: `GET http://localhost:5000/health`
+### Primary endpoints
 
-### API base URL
-
-```
-http://localhost:5000/api
-```
-
-### Key endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/tickets` | List tickets (search, filter, paginate) |
-| `POST` | `/api/tickets` | Create a ticket |
-| `GET` | `/api/tickets/:id` | Get ticket with comments |
-| `PATCH` | `/api/tickets/:id` | Update ticket fields |
-| `PATCH` | `/api/tickets/:id/status` | Update ticket status |
-| `DELETE` | `/api/tickets/:id` | Soft-delete a ticket |
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/tickets` | List (search, status, priority, sort, pagination) |
+| `POST` | `/api/tickets` | Create |
+| `GET` | `/api/tickets/:id` | Detail (includes comments) |
+| `PATCH` | `/api/tickets/:id` | Update fields |
+| `PATCH` | `/api/tickets/:id/status` | Transition status |
+| `DELETE` | `/api/tickets/:id` | Soft delete |
 | `GET` | `/api/tickets/:id/comments` | List comments |
-| `POST` | `/api/tickets/:id/comments` | Add a comment |
-| `GET` | `/api/users` | List users (for assignment dropdowns) |
-| `GET` | `/api/users/:id` | Get user by ID |
+| `POST` | `/api/tickets/:id/comments` | Add comment |
+| `GET` | `/api/users` | List users (assignment dropdowns) |
+| `GET` | `/api/users/:id` | User by id |
 
-See [`api-contract.md`](api-contract.md) for full request/response details.
+Full request/response shapes live in [`api-contract.md`](api-contract.md).
 
-## Running Frontend
+---
+
+## Running the UI
 
 ```bash
 cd client
 npm run dev
 ```
 
-The app runs at **http://localhost:5173**. API calls to `/api/*` are proxied to the backend.
+Open **http://localhost:5173**.
 
 ### Production build
 
@@ -267,62 +316,53 @@ npm run build
 npm run preview
 ```
 
-### Routes
+### Client routes
 
-| Path | Page |
-|------|------|
+| Path | Screen |
+|------|--------|
 | `/` | Dashboard |
-| `/tickets` | Ticket list with search and filters |
+| `/tickets` | Queue — search, filters, sort, table |
 | `/tickets/new` | Create ticket |
-| `/tickets/:id` | Ticket detail, status actions, comments |
-| `/tickets/:id/edit` | Edit ticket |
-| `/login` | Login stub (stretch) |
+| `/tickets/:id` | Detail, status actions, comments |
+| `/tickets/:id/edit` | Edit fields |
+| `/login` | Stretch stub |
 
-## Running Tests
+---
 
-### Backend (Jest + Supertest)
+## Tests
+
+### Backend — Jest + Supertest
 
 ```bash
 cd server
 npm test
-
-# Watch mode
 npm run test:watch
 ```
 
-Integration tests use an in-memory MongoDB instance (`mongodb-memory-server`). **173 tests** across unit and integration suites covering:
+Suites use **mongodb-memory-server**. As of the latest run: **176 tests** across unit and integration files, covering CRUD, validation, comments, search/filters, the status machine, error mapping, users, and seed-backed scenarios.
 
-- CRUD operations
-- Validation
-- Comments
-- Search and filtering
-- Status state machine
-- Error handling
-- Seed script
+> Memory-server needs process/network freedom. If a sandboxed terminal blocks binary download, re-run outside the sandbox (or with unrestricted permissions).
 
-### Frontend (Vitest + Testing Library)
+### Frontend — Vitest + Testing Library
 
 ```bash
 cd client
 npm test
-
-# Watch mode
 npm run test:watch
 ```
 
-**14 tests** covering validation utilities, API error helpers, retry logic, debounce hook, and key UI components.
+**14 tests** focus on validation helpers, API error parsing, retry behavior, debounce, and small UI pieces (`StatusBadge`, `ErrorAlert`, etc.).
 
-## Seed Data
+---
 
-Run from the `server` directory:
+## Demo seed data
 
 ```bash
+cd server
 npm run seed
 ```
 
-### Demo credentials
-
-All seeded users share the same password:
+### Accounts (auth not wired — for future use / reference)
 
 | Email | Role | Password |
 |-------|------|----------|
@@ -331,19 +371,17 @@ All seeded users share the same password:
 | `agent@demo.com` | agent | `Demo@1234` |
 | `customer@demo.com` | customer | `Demo@1234` |
 
-> Authentication is not wired up yet. These credentials are for reference and future auth implementation.
+Passwords are stored with **bcrypt**. Until JWT/RBAC is implemented, the API does not require these credentials.
 
-### Seeded content
+### Default seed volume
 
 | Collection | Count | Notes |
-|------------|-------|-------|
-| Users | 4 | One per role |
-| Tickets | 8 | Mix of statuses and priorities |
-| Comments | 6 | Threads on tickets T1–T4 |
+|------------|------:|-------|
+| Users | 4 | One of each role |
+| Tickets | 8 | Mixed statuses and priorities |
+| Comments | 6 | Threads on selected tickets |
 
-Sample tickets include login issues, password reset, billing discrepancies, API timeouts, and mobile app crashes. Ticket T1 has a three-comment conversation thread.
-
-The seed module is also importable for tests:
+You can also import the seeder from tests:
 
 ```js
 import { seedDatabase } from './src/scripts/seed/seedDatabase.js';
@@ -352,94 +390,95 @@ const result = await seedDatabase({ clearExisting: true });
 // result.usersByKey, result.ticketsByKey, result.commentsByKey
 ```
 
-## Folder Structure
+---
+
+## Repository layout
 
 ```
-ticket-management-application/
-├── README.md                    # This file
-├── api-contract.md              # API specification
-├── ui-flow.md                   # UI design notes
+ticket-management-system/
+├── README.md                 ← you are here
+├── api-contract.md
+├── ui-flow.md
+├── design-notes.md
+├── ai-prompts/               ← AI usage logs & prompt packs
+├── tool-specific/
+│   └── cursor-workflow/      ← Cursor project memory
 │
-├── server/                      # Express API
+├── server/                   ← Express API
 │   ├── src/
-│   │   ├── index.js             # Server entry point
-│   │   ├── app.js               # Express app (importable for tests)
-│   │   ├── config/              # Environment and database connection
-│   │   ├── constants/           # Statuses, priorities, roles, pagination
-│   │   ├── controllers/         # HTTP request handlers
-│   │   ├── domain/              # Pure business rules (state machine, query builder)
-│   │   ├── errors/              # Custom error classes and codes
-│   │   ├── middleware/          # Validation, auth stub, error handler, logging
-│   │   ├── models/              # Mongoose schemas (User, Ticket, Comment)
-│   │   ├── routes/              # Route definitions
-│   │   ├── services/            # Business logic layer
-│   │   ├── utils/               # Logger, pagination, async handler
-│   │   ├── validators/          # express-validator chains
-│   │   └── scripts/seed/        # Seed data and CLI script
-│   ├── tests/
-│   │   ├── unit/                # Domain logic, models, error classes
-│   │   ├── integration/         # API tests with in-memory MongoDB
-│   │   └── helpers/             # Test environment setup
-│   ├── .env.example
-│   └── package.json
+│   │   ├── index.js          # process entry
+│   │   ├── app.js            # Express app (imported by tests)
+│   │   ├── config/
+│   │   ├── constants/
+│   │   ├── controllers/
+│   │   ├── domain/           # statusMachine, ticketQuery
+│   │   ├── errors/
+│   │   ├── middleware/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   ├── utils/
+│   │   ├── validators/
+│   │   └── scripts/seed/
+│   └── tests/
+│       ├── unit/
+│       ├── integration/
+│       └── helpers/
 │
-├── client/                      # React SPA (Vite)
-│   ├── src/
-│   │   ├── api/                 # Low-level Axios endpoint wrappers
-│   │   ├── services/            # Service layer with retry support
-│   │   ├── hooks/               # useTickets, useTicket, useMutation, etc.
-│   │   ├── pages/               # Route-level page components
-│   │   ├── components/          # UI components (tickets, comments, common)
-│   │   ├── context/             # Toast and auth context
-│   │   ├── routes/              # React Router configuration
-│   │   ├── layouts/             # App shell layout
-│   │   ├── utils/               # Validation and error helpers
-│   │   └── constants/           # Frontend status labels
-│   ├── .env.example
-│   └── package.json
+├── client/                   ← React (Vite)
+│   └── src/
+│       ├── api/
+│       ├── services/
+│       ├── hooks/
+│       ├── pages/
+│       ├── components/
+│       ├── context/
+│       ├── routes/
+│       ├── layouts/
+│       ├── utils/
+│       └── constants/
 │
-└── database/                    # Schema and seed documentation
+└── database/                 ← schema & seed documentation
     ├── schema/
     └── seed-data/
 ```
 
-## Known Limitations
+---
 
-| Area | Limitation |
-|------|------------|
-| **Authentication** | No JWT login or session management. All API endpoints are publicly accessible. Login page and auth middleware are scaffolded only. |
-| **Authorization / RBAC** | User roles exist in the data model but are not enforced on API routes or UI actions. |
-| **Real-time updates** | No WebSockets or polling. Users must refresh to see changes from others. |
-| **File attachments** | Tickets and comments are text-only; no file upload support. |
-| **Audit trail** | Status changes and edits are not logged in a separate history collection. |
-| **Email notifications** | No outbound email on ticket creation, assignment, or status change. |
-| **Bulk operations** | No bulk update, delete, or export endpoints. |
-| **Soft-deleted tickets** | Deleted tickets are hidden from all queries with no admin restore UI. |
-| **Search** | Full-text search requires a MongoDB text index. Special characters in search terms fall back to regex matching. |
-| **Client env** | Production deployments must set `VITE_API_URL` or configure a reverse proxy; the dev proxy is not available in production builds. |
-| **Password security** | Seeded passwords are bcrypt-hashed, but without auth the hashing is unused at runtime. |
+## Known gaps
 
-## Tech Stack
+Honest limits for reviewers and future work:
 
-| Layer | Technology |
-|-------|------------|
-| Database | MongoDB with Mongoose ODM |
-| Backend | Node.js, Express, express-validator |
-| Frontend | React 18, React Router, Vite |
-| HTTP client | Axios with retry wrapper |
-| Testing | Jest, Supertest, Vitest, Testing Library |
-| Dev tools | nodemon, mongodb-memory-server |
+| Topic | Current state |
+|-------|----------------|
+| Authentication | No login required; endpoints are open. JWT pieces are stubs. |
+| Authorization | Roles are stored but not checked on routes or UI actions. |
+| Realtime | No sockets/polling — refresh to see others’ changes. |
+| Attachments | Text only. |
+| Audit history | No dedicated status/edit history collection. |
+| Notifications | No email on create/assign/status change. |
+| Bulk ops | No bulk update/delete/export APIs. |
+| Soft-delete restore | Hidden from queries; no admin undelete UI. |
+| Search | Needs a text index; odd characters use regex fallback. |
+| Production client config | Set `VITE_API_URL` or reverse-proxy `/api`; the Vite proxy is dev-only. |
 
-## Documentation Index
+---
 
-| Document | Description |
-|----------|-------------|
-| [`api-contract.md`](api-contract.md) | REST API request/response contracts |
-| [`ui-flow.md`](ui-flow.md) | UI pages and user flows |
-| [`server/README.md`](server/README.md) | Server-specific setup notes |
-| [`client/README.md`](client/README.md) | Client-specific setup notes |
-| [`database/schema/README.md`](database/schema/README.md) | Database schema documentation |
-| [`database/seed-data/README.md`](database/seed-data/README.md) | Seed data reference |
+## Further reading
+
+| Document | Contents |
+|----------|----------|
+| [`api-contract.md`](api-contract.md) | Endpoint contracts |
+| [`ui-flow.md`](ui-flow.md) | Screens and navigation |
+| [`design-notes.md`](design-notes.md) | Architecture decisions |
+| [`data-model.md`](data-model.md) | Collections and relationships |
+| [`server/README.md`](server/README.md) | Server notes |
+| [`client/README.md`](client/README.md) | Client notes |
+| [`database/schema/README.md`](database/schema/README.md) | Schema docs |
+| [`database/seed-data/README.md`](database/seed-data/README.md) | Seed reference |
+| [`ai-prompts/README.md`](ai-prompts/README.md) | AI prompt history |
+
+---
 
 ## License
 
