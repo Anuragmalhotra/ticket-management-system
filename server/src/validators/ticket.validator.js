@@ -3,6 +3,7 @@ import {
   forbidStatusOnTicketBodyValidator,
   optionalAssignmentValidator,
   optionalDescriptionValidator,
+  optionalPriorityFilterValidator,
   optionalPriorityValidator,
   optionalStatusFilterValidator,
   optionalTitleValidator,
@@ -22,6 +23,21 @@ export const listTicketsValidator = [
     .isLength({ max: 200 })
     .withMessage('Search query cannot exceed 200 characters'),
   optionalStatusFilterValidator(),
+  optionalPriorityFilterValidator(),
+  query('sortBy')
+    .optional({ values: 'falsy' })
+    .isString()
+    .withMessage('sortBy must be a string')
+    .trim()
+    .isIn(['title', 'status', 'priority', 'createdAt', 'updatedAt'])
+    .withMessage('sortBy must be one of: title, status, priority, createdAt, updatedAt'),
+  query('sortOrder')
+    .optional({ values: 'falsy' })
+    .isString()
+    .withMessage('sortOrder must be a string')
+    .trim()
+    .isIn(['asc', 'desc'])
+    .withMessage('sortOrder must be asc or desc'),
   query('page')
     .optional()
     .isInt({ min: 1 })

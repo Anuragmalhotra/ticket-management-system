@@ -1,8 +1,8 @@
 # AI Usage — Design Phase
 
-> Tool: **Cursor (Claude)**  
-> Date: **20 July 2026**  
-> Phase: Architecture, data model, API contract, UI design
+> **Tool:** Cursor (Claude)  
+> **Date:** 20 July 2026  
+> **Phase:** Architecture, data model, API contract, UI design
 
 This document records AI prompts used during the design phase, including what was accepted, modified, or rejected.
 
@@ -13,24 +13,45 @@ This document records AI prompts used during the design phase, including what wa
 ### Original Prompt
 
 ```
-Design the complete architecture.
+Role: Principal engineer writing an architecture decision record for a MERN helpdesk app.
 
-Include:
+Context:
+Support Ticket Management System assessment. Stack: MongoDB, Express, React (Vite), Node.js.
+Core: tickets, comments, status state machine, search/filter, validation, errors, tests.
+Stretch: JWT auth / RBAC (scaffold-friendly design only).
 
-Frontend Architecture
-Backend Architecture
-MongoDB Design
-Folder Structure
-REST API Design
-Validation Strategy
-Error Handling Strategy
-Logging Strategy
-Testing Strategy
-State Machine Strategy
+Objective:
+Produce a complete architecture design that an implementer (or Cursor) can follow without guessing.
 
-Explain every design decision.
+Constraints:
+- Do NOT generate application source code
+- Prefer simple, testable designs over enterprise frameworks
+- Explain the “why” for each major decision (ADR-style)
 
-Do not generate code.
+Cover these areas:
+1. Frontend architecture (pages, hooks, services, state)
+2. Backend architecture (layers and responsibilities)
+3. MongoDB design (collections, indexes, soft delete)
+4. Folder structure (monorepo)
+5. REST API design conventions
+6. Validation strategy
+7. Error handling strategy
+8. Logging strategy
+9. Testing strategy (unit vs integration; mandatory state-machine tests)
+10. Status state machine strategy (pure domain module)
+
+Assumptions:
+- Soft delete for tickets via deletedAt
+- Comments are a separate collection
+- Auth is stretch and must not block core paths
+
+Acceptance criteria:
+- Write/update design-notes.md
+- Every layer has a clear responsibility boundary
+- State machine is isolated from Mongoose
+- Testing pyramid includes mandatory transition tests
+
+Output: design-notes.md (markdown only).
 ```
 
 ### AI Summary
@@ -72,32 +93,45 @@ Assessment scope favors clarity and testability over enterprise scale. A pure st
 ### Original Prompt
 
 ```
-Design the MongoDB schema.
+Role: Data modeler for a MERN ticket system.
 
-Entities:
+Objective:
+Design the MongoDB data model and supporting database docs before writing Mongoose code.
 
-User
-Ticket
-Comment
+Entities (required): User, Ticket, Comment.
 
-Include:
+Document:
+- Collections and field definitions (types, required, enums, defaults)
+- Relationships (refs / cardinality)
+- Indexes (unique, text, compound) and why each exists
+- Validation rules (schema-level)
+- Seed data strategy (deterministic, reusable for tests)
+- Migration / re-seed strategy for local development
+- Environment variables needed for DB connection
 
-Collections
-Relationships
-Indexes
-Validation Rules
-Seed Data Strategy
-Migration Strategy
-Environment Variables
+Generate / update:
+- data-model.md
+- database/setup-notes.md (or setup.md)
+- database/schema/* field docs
+- database/seed-data/* sample records
 
-Generate:
+Constraints:
+- No application code yet (no .js models)
+- Prefer normalized comments (separate collection)
+- Never store plaintext passwords in seed docs
 
-data-model.md
-database/setup-notes.md
-database/schema
-database/seed-data
+Assumptions:
+- Roles: admin, manager, agent, customer
+- Ticket statuses: open, in_progress, resolved, closed, cancelled
+- Priorities: low, medium, high
+- Soft delete on tickets only
 
-No code yet.
+Acceptance criteria:
+- Every relationship is explicit
+- Indexes map to list/search query patterns
+- Seed keys (e.g. t1, admin, c1) support test reuse
+
+Output: Markdown documentation only.
 ```
 
 ### AI Summary
@@ -136,30 +170,43 @@ Normalized comments support unbounded threads without document size limits. Sepa
 ### Original Prompt
 
 ```
-Design a REST API contract.
+Role: API designer writing a contract an assessor can validate against the running server.
 
-Generate every endpoint.
+Objective:
+Design a complete REST API contract for the ticket system.
 
-Include:
+For EVERY endpoint document:
+- Method + URL
+- Purpose
+- Auth expectation (none for core; note stretch)
+- Request body / query params
+- Success response body + status code
+- Validation rules
+- Possible errors (code, HTTP status, when)
 
-Method
-URL
-Purpose
-Request Body
-Response Body
-Validation Rules
-Possible Errors
-Status Codes
+Resources / capabilities to include:
+- Tickets CRUD (soft delete)
+- Dedicated status update endpoint
+- Nested comments (list + create)
+- Users (read-only for seed/dropdowns)
+- Search + status filter + pagination on ticket list
 
-Include:
+Constraints:
+- Markdown only — no Express code
+- Prefer PATCH for partial updates
+- Keep nesting to one level under tickets
+- Use a consistent error envelope: { error: { code, message, details } }
 
-Tickets
-Comments
-Users (Seed only)
-Status Update Endpoint
-Search Endpoint
+Assumptions:
+- Soft-deleted tickets are omitted from lists and return 404 on direct access
+- Invalid status transitions return 409 with a clear message
 
-Return markdown only.
+Acceptance criteria:
+- Separate PATCH /tickets/:id/status exists (not folded into generic update)
+- List response includes pagination metadata
+- Error codes are named and stable (VALIDATION_ERROR, NOT_FOUND, INVALID_TRANSITION, …)
+
+Output: api-contract.md
 ```
 
 ### AI Summary
@@ -172,13 +219,13 @@ The AI generated `api-contract.md` documenting all ticket CRUD endpoints, dedica
 - `GET /tickets` with `search`, `status`, `page`, `limit` query params
 - Paginated list response: `{ tickets, total, page, limit, totalPages }`
 - Standard error envelope: `{ error: { code, message, details } }`
-- `204` avoided in favor of JSON bodies for consistency
 - Soft-deleted tickets return `404` on direct access
 
 ### Modified
 
 - User endpoints limited to read-only (seed support) — no user CRUD API
 - Search uses MongoDB `$text` for alphanumeric terms; regex fallback for special characters
+- Prefer JSON success bodies over empty `204` for most mutations (consistency)
 
 ### Rejected
 
@@ -197,30 +244,43 @@ REST with explicit status endpoint makes state machine enforcement visible in th
 ### Original Prompt
 
 ```
-Design the frontend.
+Role: Product-minded frontend designer for a React helpdesk SPA.
 
-Pages:
+Objective:
+Design the frontend UX and component structure before coding pages.
 
-Dashboard
-Ticket List
-Create Ticket
-Ticket Detail
-Edit Ticket
-Search
-Status Update
-Comment Section
+Pages / areas to cover:
+- Dashboard
+- Ticket List (with search/filter)
+- Create Ticket
+- Ticket Detail (status actions + comments)
+- Edit Ticket
+- Status update UX (allowed transitions only)
+- Comment section
 
-Include:
+Also document:
+- User flows and navigation map
+- Component hierarchy (pages → features → shared)
+- State management approach
+- Error UI and loading UI patterns
+- Responsive behavior (desktop + mobile)
 
-User Flow
-Navigation
-Component Hierarchy
-State Management
-Error UI
-Loading UI
-Responsive Design
+Constraints:
+- Generate ui-flow.md only (no React code)
+- Prefer integrating search into Ticket List (not a separate /search route)
+- Auth/login may be scaffolded as stretch UI only
 
-Generate ui-flow.md
+Assumptions:
+- React Router + Vite
+- Context API + custom hooks (no Redux)
+- Toast notifications for mutation feedback
+
+Acceptance criteria:
+- Routes are enumerated
+- StatusActions only exposes allowed next statuses
+- Loading/error/empty states are specified per major page
+
+Output: ui-flow.md with wireframe-style ASCII or tables as needed.
 ```
 
 ### AI Summary
@@ -270,3 +330,4 @@ Integrating search into the list page matches common helpdesk UX and reduces rou
 - [`../api-contract.md`](../api-contract.md)
 - [`../ui-flow.md`](../ui-flow.md)
 - [`../database/schema/README.md`](../database/schema/README.md)
+- [`./02-architecture-design.md`](./02-architecture-design.md)

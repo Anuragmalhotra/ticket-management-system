@@ -50,7 +50,10 @@ const assertValidStatusTransition = (currentStatus, newStatus) => {
 export const getTickets = async (filters = {}) => {
   const { page, limit, skip } = parsePagination(filters);
   const { filter, useTextSearch } = buildTicketListFilter(filters);
-  const sort = buildTicketListSort(useTextSearch);
+  const sort = buildTicketListSort(useTextSearch, {
+    sortBy: filters.sortBy,
+    sortOrder: filters.sortOrder,
+  });
 
   const [tickets, total] = await Promise.all([
     Ticket.find(filter)

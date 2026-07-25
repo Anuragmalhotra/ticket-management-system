@@ -2,28 +2,36 @@
 
 ## Personal Details
 
-<!-- TODO: Full name -->
-
-<!-- TODO: Email -->
-
-<!-- TODO: Employee / candidate ID (if applicable) -->
+- **Full name:** Anurag Malhotra
+- **Email:** anurag.malhotra@tothenew.com
+- **Employee / candidate ID:** 1713
 
 ## Assessment Details
 
-<!-- TODO: Assessment name -->
-
-<!-- TODO: Submission date -->
-
-<!-- TODO: Repository URL -->
+- **Assessment name:** Ticket Management System
+- **Submission date:** 2026-07-25
+- **Repository URL:** https://github.com/Anuragmalhotra/ticket-management-system
+- **Git clone (SSH):** `git@github.com:Anuragmalhotra/ticket-management-system.git`
 
 ## AI Tools Used
 
-<!-- TODO: List AI tools (e.g., Cursor, ChatGPT, Claude) -->
+| Tool | Purpose |
+|------|---------|
+| Cursor | Primary IDE assistant for requirements, design, implementation, testing, and documentation |
+| ChatGPT | Occasional secondary review of architecture choices and debugging approaches |
 
 ## Time Spent
 
-<!-- TODO: Approximate hours per phase -->
+| Phase | Approximate hours |
+|-------|-------------------|
+| Requirements analysis & planning | 3 |
+| Design & architecture | 4 |
+| Backend implementation | 8 |
+| Frontend implementation | 8 |
+| Testing & debugging | 4 |
+| Documentation & reflection | 3 |
+| **Total** | **~30** |
 
 ## Declaration
 
-<!-- TODO: Confirm work is your own and AI usage is documented -->
+I confirm that this submission is my own work. AI tools were used as documented above and in `final-ai-usage-summary.md` / `ai-prompts/`. All AI-generated output was reviewed, validated, and adapted by me before inclusion.

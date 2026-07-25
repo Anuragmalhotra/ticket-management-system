@@ -1,10 +1,10 @@
 # AI Usage — Code Review Phase
 
-> Tool: **Cursor (Claude)**  
-> Date: **20 July 2026**  
-> Phase: Self-review during and after implementation
+> **Tool:** Cursor (Claude)  
+> **Date:** 20 July 2026  
+> **Phase:** Self-review during and after implementation
 
-This document records AI-assisted code review observations — strengths identified, issues found, and decisions on what to fix vs defer.
+This document records AI-assisted code review observations — strengths identified, issues found, and decisions on what to fix vs defer. Several reviews were originally implicit (continuous self-checks during implementation); they are restated below as explicit high-quality review prompts while preserving accurate findings and dispositions.
 
 ---
 
@@ -13,7 +13,40 @@ This document records AI-assisted code review observations — strengths identif
 ### Original Prompt
 
 ```
-(Implicit — continuous review during implementation against design-notes.md and cursor-rules)
+Role: Staff engineer reviewing this MERN ticket system against the agreed architecture.
+
+Context:
+(Originally implicit — continuous review during implementation against design-notes.md and cursor-rules.)
+Design requires: pure domain status machine, validation at route boundary, business rules in services,
+thin controllers, consistent error envelope, and no secrets in source.
+
+Objective:
+Perform an architecture compliance review of the implemented backend/frontend layers and report
+drift, violations, and acceptable temporary coexistence of legacy utilities.
+
+Constraints:
+- Do NOT propose large framework changes (e.g. Redux) unless a hard violation requires it
+- Do NOT move state-machine enforcement into Mongoose middleware
+- Prefer evidence (file/path references) over vague style opinions
+- Stretch auth must remain labeled stretch — not treated as a core architecture failure
+
+Review checklist:
+1. domain/statusMachine.js has zero Mongoose imports
+2. Controllers only delegate; services own business rules
+3. Validators contain input rules only (no transition/domain policy)
+4. Error envelope consistency across routes
+5. No credentials or secrets in code
+
+Assumptions:
+- design-notes.md and cursor-rules are the source of truth
+- Legacy utils may temporarily coexist if new code uses the intended modules
+
+Acceptance criteria:
+- Clear Accepted / Modified / Rejected findings with rationale
+- Any architecture drift is either fixed or explicitly deferred with reason
+
+Output format:
+- Structured review notes (strengths, issues, dispositions)
 ```
 
 ### AI Summary
@@ -47,7 +80,39 @@ Architecture compliance is an assessment evaluation criterion. Self-review durin
 ### Original Prompt
 
 ```
-(Implicit — security defaults in cursor-rules and workspace rules)
+Role: Application security reviewer for a student/assessment MERN API (secure-by-default, not pen-test).
+
+Context:
+(Originally implicit — security defaults in cursor-rules and workspace rules.)
+Core scope excludes full JWT auth/RBAC (stretch). Seed users exist for demos/tests. API is CORS-enabled
+for a configured client origin.
+
+Objective:
+Review current security defaults and call out must-fix issues vs intentional stretch deferrals.
+
+Constraints:
+- Do NOT require full auth middleware as a core blocker (document as stretch/limitation instead)
+- Do NOT recommend disabling CORS, returning stack traces in production responses, or plaintext passwords
+- Do NOT introduce eval, unsafe deserialization, or hardcoded production secrets
+- Keep recommendations proportional to assessment scope
+
+Review areas:
+1. Credentials handling (seed hashing, password serialization)
+2. Input validation on write endpoints + ObjectId format checks
+3. CORS configuration source (env vs wildcard)
+4. Error responses (no sensitive stack leakage in production paths)
+5. Obvious insecure patterns (eval, hardcoded secrets)
+
+Assumptions:
+- Demo seed password may appear in README for assessors; not a production secret store
+- Auth middleware may exist as a TODO stub
+
+Acceptance criteria:
+- Zero critical issues left unaddressed without explicit deferral + README limitation note
+- Accepted/Rejected lists distinguish design deferrals from real defects
+
+Output format:
+- Security findings table or bullets with severity and disposition
 ```
 
 ### AI Summary
@@ -82,7 +147,39 @@ Auth is explicitly out of core scope. Other security defaults follow secure-by-d
 ### Original Prompt
 
 ```
-(Implicit — review after centralized error handling implementation)
+Role: API designer reviewing error-handling consistency across backend and frontend.
+
+Context:
+(Originally implicit — review after centralized error handling implementation.)
+Backend should return a stable JSON envelope { error: { code, message, details } }.
+Frontend helpers parse that envelope for user-facing messages and field errors.
+Integration tests should assert codes, not only status numbers.
+
+Objective:
+Verify end-to-end consistency of typed errors, Mongoose mapping, HTTP statuses, and client parsers.
+
+Constraints:
+- Do NOT invent per-endpoint custom error shapes
+- Do NOT return HTML error pages from the JSON API
+- Prefer shared errorCodes constants over string literals
+- Keep frontend parsing tolerant but aligned with the envelope
+
+Review checklist:
+1. Typed error classes expose statusCode + code
+2. Global handler maps Mongoose/cast/validation errors correctly
+3. Frontend getErrorMessage / getFieldErrors match envelope fields
+4. Integration tests lock critical codes (e.g. INVALID_TRANSITION, NOT_FOUND)
+
+Assumptions:
+- Centralized errors/ module is the intended path; legacy ApiError may still exist
+
+Acceptance criteria:
+- Consistent envelope on sampled success/failure paths
+- Any literal code strings migrated or noted as Modified
+- Rejected alternatives documented
+
+Output format:
+- Consistency review with Accepted/Modified/Rejected
 ```
 
 ### AI Summary
@@ -116,8 +213,38 @@ Consistent errors reduce frontend complexity and make integration tests determin
 ### Original Prompt
 
 ```
-Generate additional tests.
-(followed by review of coverage gaps)
+Role: QA lead reviewing coverage after the mandatory state-machine suite lands.
+
+Context:
+(Originally started from “Generate additional tests,” then followed by an explicit coverage-gap review.)
+State-machine integration tests exist. Remaining gaps suspected: CRUD lifecycle, search combinations,
+frontend utilities, seed-based comment threads.
+
+Objective:
+Identify the highest-value missing tests and drive gap-fill that maximizes assessment confidence
+per hour of work.
+
+Constraints:
+- Prefer integration tests for API behavior
+- Limit frontend to utilities/small components (no full browser E2E)
+- Do NOT mock the database in integration tests
+- Do NOT pursue 100% coverage or Cypress/Playwright in this pass
+
+Deliverables:
+1. Gap list prioritized by risk
+2. Concrete suites to add (CRUD, search combos, comments, errors, frontend utils)
+3. Disposition for out-of-scope items (E2E, page mounts)
+
+Assumptions:
+- Shared testEnvironment + seed data remain available
+- Target is a green suite around the existing ~187 test count after gap-fill
+
+Acceptance criteria:
+- Gaps either closed with new tests or explicitly rejected with rationale
+- Frontend scope stays utility/component-level
+
+Output format:
+- Coverage gap review + resulting test inventory
 ```
 
 ### AI Summary
@@ -150,7 +277,39 @@ Targeted gap filling provides best coverage-to-effort ratio for assessment submi
 ### Original Prompt
 
 ```
-(Implicit — review during hook and service layer implementation)
+Role: Frontend/backend code quality reviewer focusing on DRY without over-abstraction.
+
+Context:
+(Originally implicit — review during hook and service layer implementation.)
+React hooks may duplicate fetch/mutation/error handling. Backend validators may repeat field rules.
+Service layer should centralize HTTP concerns where appropriate.
+
+Objective:
+Review duplication and naming consistency; recommend consolidations that reduce drift without
+introducing generic factories or HOC sprawl.
+
+Constraints:
+- Do NOT abstract every component into HOCs
+- Do NOT create a generic CRUD hook factory unless duplication is severe and proven
+- Prefer small shared hooks (useAsync/useMutation) and shared field validators
+- Keep naming consistent with existing project conventions
+
+Review areas:
+1. Duplicated API call / retry logic across hooks
+2. Ticket mutation hook consolidation opportunities
+3. Shared validators vs copy-pasted express-validator chains
+4. Missing error handling in hooks
+
+Assumptions:
+- Service layer is the right place for HTTP + retry
+- Some duplication is acceptable if abstraction would obscure intent
+
+Acceptance criteria:
+- Clear Accepted consolidations vs Rejected over-abstractions
+- Any consolidation (e.g. useTicketMutations) called out under Modified
+
+Output format:
+- Quality/duplication review with dispositions
 ```
 
 ### AI Summary
@@ -205,3 +364,6 @@ Reusable hooks and services follow DRY without introducing unnecessary abstracti
 - [`../code-review-notes.md`](../code-review-notes.md)
 - [`../review-fixes.md`](../review-fixes.md)
 - [`../tool-specific/cursor-workflow/cursor-rules-or-instructions.md`](../tool-specific/cursor-workflow/cursor-rules-or-instructions.md)
+- [`./06-code-review.md`](./06-code-review.md)
+- [`./testing.md`](./testing.md)
+- [`./debugging.md`](./debugging.md)

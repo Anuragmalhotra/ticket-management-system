@@ -7,11 +7,15 @@ import UserSelect from './UserSelect.jsx';
 import { getEntityId } from '../../utils/entity.js';
 import { validateTicketForm } from '../../utils/validation.js';
 
+const EMPTY_INITIAL_VALUES = Object.freeze({});
+const EMPTY_USERS = Object.freeze([]);
+const EMPTY_ERRORS = Object.freeze({});
+
 const TicketForm = ({
   mode = 'create',
-  initialValues = {},
-  users = [],
-  errors: externalErrors = {},
+  initialValues = EMPTY_INITIAL_VALUES,
+  users = EMPTY_USERS,
+  errors: externalErrors = EMPTY_ERRORS,
   isSubmitting = false,
   onSubmit,
   onCancel,
@@ -21,24 +25,32 @@ const TicketForm = ({
     [users],
   );
 
+  const initialTitle = initialValues.title ?? '';
+  const initialDescription = initialValues.description ?? '';
+  const initialPriority = initialValues.priority ?? 'medium';
+  const initialCreatedBy = getEntityId(initialValues.createdBy) ?? defaultCreatedBy;
+  const initialAssignedTo = getEntityId(initialValues.assignedTo);
+
   const [values, setValues] = useState({
-    title: initialValues.title ?? '',
-    description: initialValues.description ?? '',
-    priority: initialValues.priority ?? 'medium',
-    createdBy: getEntityId(initialValues.createdBy) ?? defaultCreatedBy,
-    assignedTo: getEntityId(initialValues.assignedTo),
+    title: initialTitle,
+    description: initialDescription,
+    priority: initialPriority,
+    createdBy: initialCreatedBy,
+    assignedTo: initialAssignedTo,
   });
   const [errors, setErrors] = useState({});
 
+  // Sync from props only when the source values actually change (not on every new object identity).
+  // Using `initialValues` / default `{}` as a dependency remounted form state on every keystroke.
   useEffect(() => {
     setValues({
-      title: initialValues.title ?? '',
-      description: initialValues.description ?? '',
-      priority: initialValues.priority ?? 'medium',
-      createdBy: getEntityId(initialValues.createdBy) ?? defaultCreatedBy,
-      assignedTo: getEntityId(initialValues.assignedTo),
+      title: initialTitle,
+      description: initialDescription,
+      priority: initialPriority,
+      createdBy: initialCreatedBy,
+      assignedTo: initialAssignedTo,
     });
-  }, [initialValues, defaultCreatedBy]);
+  }, [initialTitle, initialDescription, initialPriority, initialCreatedBy, initialAssignedTo]);
 
   const mergedErrors = { ...errors, ...externalErrors };
 

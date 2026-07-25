@@ -4,7 +4,7 @@ const Navbar = () => {
   return (
     <header className="navbar">
       <NavLink to="/" className="navbar__brand">
-        TicketManager
+        Ticket Management System
       </NavLink>
       <nav className="navbar__links" aria-label="Main navigation">
         <NavLink to="/">Dashboard</NavLink>

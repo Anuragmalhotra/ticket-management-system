@@ -1,8 +1,8 @@
 # AI Usage — Testing Phase
 
-> Tool: **Cursor (Claude)**  
-> Date: **20 July 2026**  
-> Phase: Integration tests, unit tests, frontend component tests
+> **Tool:** Cursor (Claude)  
+> **Date:** 20 July 2026  
+> **Phase:** Integration tests, unit tests, frontend component tests
 
 This document records AI prompts used during testing, including what was accepted, modified, or rejected.
 
@@ -13,19 +13,46 @@ This document records AI prompts used during testing, including what was accepte
 ### Original Prompt
 
 ```
-Create integration tests using Jest and Supertest.
+Role: Senior backend engineer writing mandatory Jest/Supertest integration tests for a MERN ticket system.
 
-Focus on Ticket State Machine.
+Context:
+Support Ticket Management System assessment. Backend uses Express + Mongoose + MongoDB.
+The status state machine is the assessment’s mandatory test tier and lives in a pure domain module,
+enforced by the ticket service on status-update endpoints.
+Seed users/tickets/comments already exist for known starting statuses.
 
-Verify:
+Objective:
+Create integration tests that prove valid transitions succeed and invalid transitions fail end-to-end
+(HTTP → service → DB), not just unit-level domain checks.
 
-Valid transitions succeed
-Invalid transitions fail
-Database updates correctly
-HTTP status codes
-Error messages
+Constraints:
+- Use Jest + Supertest against the real Express app
+- Use an isolated in-memory MongoDB (mongodb-memory-server), not a shared/dev database
+- Seed the test database before each test (or suite) so starting states are deterministic
+- Do NOT mock the service layer or Mongoose models (defeats integration purpose)
+- Assert both HTTP responses and persisted DB state
 
-Seed test database before tests.
+Verify (minimum):
+1. Valid transitions succeed (correct HTTP status + updated ticket status in DB)
+2. Invalid transitions fail (correct HTTP status + stable error code/message)
+3. Database updates correctly after each successful transition
+4. Error messages are human-readable (not opaque stack dumps)
+5. Coverage spans transitions reachable from seed data
+
+Assumptions:
+- Seed data provides tickets in multiple statuses for valid/invalid cases
+- Soft-deleted tickets must not be treated as successfully transitionable
+- Error envelope follows project convention: { error: { code, message, details } }
+
+Acceptance criteria:
+- Dedicated file under server/tests/integration/ for state-machine cases
+- Shared test environment helper used for connect/seed/teardown
+- Assertions cover status codes, error codes, messages, and DB state
+- Suite is stable under single-worker Jest (memory server)
+
+Output format:
+- Integration test file(s) + any minimal shared helper changes
+- Brief summary of cases added (valid vs invalid)
 ```
 
 ### AI Summary
@@ -62,14 +89,48 @@ State machine integration tests are the assessment's mandatory test tier. Seeded
 ### Original Prompt
 
 ```
-Generate additional tests.
+Role: Test engineer expanding coverage beyond the mandatory state-machine suite.
 
-CRUD tests
-Validation tests
-Comment tests
-Search tests
-Backend error tests
-Frontend component tests where useful.
+Context:
+State-machine integration tests already exist and pass.
+We still need broader API and frontend confidence for CRUD, validation, comments, search,
+backend error mapping, and high-value UI utilities/components.
+
+Objective:
+Generate additional automated tests that close the highest-value coverage gaps without
+building a full browser E2E suite.
+
+Constraints:
+- Prefer backend integration tests (Jest + Supertest + memory MongoDB) for API correctness
+- Keep frontend tests focused on pure utilities and small isolated components (Vitest + Testing Library)
+- Do NOT introduce Cypress/Playwright or snapshot-heavy UI suites
+- Do NOT target 100% line coverage as a goal
+- Reuse existing seed/test helpers where possible
+- Follow existing test file naming and folder conventions
+
+Deliverables:
+1. Backend CRUD integration tests (ticket lifecycle with seed data)
+2. Validation integration tests (ticket + comment field rules)
+3. Comment integration tests (seed-based threads)
+4. Search/filter integration tests (keyword, status, combined filters, pagination)
+5. Backend error-path tests (404, cast errors, soft-delete 404)
+6. Useful frontend tests (validation utils, API error helpers, retry, debounce, StatusBadge/StatusActions, ErrorAlert)
+7. Users endpoint coverage if already implemented
+
+Assumptions:
+- mongodb-memory-server + shared testEnvironment helper remain the integration baseline
+- Text indexes / syncIndexes may be required for $text search tests (fix helper if needed)
+- Frontend page-level E2E is out of scope for this pass
+
+Acceptance criteria:
+- New suites are green under npm test (server) and npm test (client)
+- Search tests assert meaningful filter combinations, not only happy-path keyword
+- Error tests assert stable error codes from the shared envelope
+- Frontend tests avoid brittle full-page mounts
+
+Output format:
+- New/updated test files only (plus minimal helper/config fixes if required)
+- Short inventory of suites and what each covers
 ```
 
 ### AI Summary
@@ -146,3 +207,5 @@ cd client && npm test        # Vitest
 - [`../test-results.md`](../test-results.md)
 - [`../server/tests/`](../server/tests/)
 - [`../client/src/**/*.test.*`](../client/src/)
+- [`./05-testing-and-debugging.md`](./05-testing-and-debugging.md)
+- [`./debugging.md`](./debugging.md)

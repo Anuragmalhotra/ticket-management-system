@@ -1,13 +1,20 @@
 # AI Prompts
 
-Traceable AI interaction history for the Support Ticket Management System assessment.
+Traceable AI interaction history for the **Support Ticket Management System** assessment.
 
 ## Overview
 
-This folder documents every major AI prompt used during the project lifecycle, organized by phase. Each entry records the original prompt, AI output summary, and explicit decisions on what was accepted, modified, or rejected — with rationale.
+This folder documents every major AI prompt used during the project lifecycle, organized by phase. Each entry records:
 
-**Tool:** Cursor (Claude)  
-**Date:** 20 July 2026
+1. The **original prompt** (improved for clarity and reuse while preserving original intent)
+2. An **AI output summary**
+3. Explicit decisions on what was **accepted**, **modified**, or **rejected** — with rationale
+
+| Field | Meaning |
+|-------|---------|
+| **Tool** | Cursor (Claude) |
+| **Assessment date** | 20 July 2026 |
+| **Stack** | MongoDB, Express, React, Node.js (MERN) |
 
 ## Prompt Log Index
 
@@ -21,13 +28,26 @@ This folder documents every major AI prompt used during the project lifecycle, o
 | [code-review.md](./code-review.md) | Review | 5 | Architecture, security, errors, coverage, quality |
 | [documentation.md](./documentation.md) | Documentation | 2 | README, AI usage logs |
 
-## Entry Format
+## Canonical Phase Prompts (Numbered)
 
-Each prompt in the log files follows this structure:
+Reusable, assessment-ready prompt packs that mirror each lifecycle phase:
+
+| File | Phase | Supersedes log focus |
+|------|-------|----------------------|
+| [01-requirements-analysis.md](./01-requirements-analysis.md) | Planning | Requirements & scope |
+| [02-architecture-design.md](./02-architecture-design.md) | Design | Architecture & contracts |
+| [03-backend-implementation.md](./03-backend-implementation.md) | Implementation | Express/Mongoose API |
+| [04-frontend-implementation.md](./04-frontend-implementation.md) | Implementation | React SPA |
+| [05-testing-and-debugging.md](./05-testing-and-debugging.md) | Testing | Tests & fixes |
+| [06-code-review.md](./06-code-review.md) | Review | Structured self-review |
+
+Use the numbered files as **canonical prompt templates**. Use the phase logs above as the **historical record** of what was run, accepted, and changed.
+
+## Entry Format (Phase Logs)
 
 ```
 ### Original Prompt
-The exact or summarized user prompt.
+The prompt as used (or a strengthened equivalent that preserves intent).
 
 ### AI Summary
 What the AI produced or recommended.
@@ -45,12 +65,26 @@ What was explicitly not adopted.
 Why those decisions were made.
 ```
 
+## Prompt Quality Standards
+
+All prompts in this folder follow these conventions:
+
+1. **Role** — who the model should act as
+2. **Context** — project, stack, and constraints
+3. **Objective** — one clear goal per prompt
+4. **Constraints** — what not to do (e.g. no code yet)
+5. **Deliverables** — concrete outputs expected
+6. **Assumptions** — stated when they reduce ambiguity
+7. **Acceptance criteria** — how “done” is judged
+8. **Output format** — markdown, code layout, or both
+
 ## Conventions
 
 - **Date format:** DD Month YYYY
 - **Prompt numbering:** Sequential within each phase file
-- **Implicit prompts:** Debugging and review issues discovered during development are logged with context, even when not explicit user prompts
+- **Implicit prompts:** Debugging and review issues discovered during development are logged with context even when not explicit user prompts
 - **Duplicate prompts:** Logged with outcome (e.g. idempotent verification, no duplicate code)
+- **Honesty:** Deferred and rejected items are recorded; no fabricated prompts
 
 ## Summary Statistics
 
@@ -67,17 +101,5 @@ Why those decisions were made.
 
 - [`../final-ai-usage-summary.md`](../final-ai-usage-summary.md) — high-level AI usage retrospective
 - [`../tool-specific/cursor-workflow/`](../tool-specific/cursor-workflow/) — persistent project context and rules
+- [`../tool-specific/cursor-workflow/prompt-templates.md`](../tool-specific/cursor-workflow/prompt-templates.md) — reusable Cursor templates
 - [`../reflection.md`](../reflection.md) — candidate reflection on AI-assisted development
-
-## Legacy Numbered Files
-
-The following numbered files were the original scaffold and are superseded by the phase-based logs above:
-
-| Legacy File | Superseded By |
-|-------------|---------------|
-| `01-requirements-analysis.md` | `planning.md` |
-| `02-architecture-design.md` | `design.md` |
-| `03-backend-implementation.md` | `implementation.md` |
-| `04-frontend-implementation.md` | `implementation.md` |
-| `05-testing-and-debugging.md` | `testing.md`, `debugging.md` |
-| `06-code-review.md` | `code-review.md` |

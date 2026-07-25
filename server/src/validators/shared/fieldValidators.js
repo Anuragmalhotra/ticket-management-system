@@ -93,6 +93,16 @@ export const optionalStatusFilterValidator = () =>
     .isIn(TICKET_STATUSES)
     .withMessage(enumMessage('Status', TICKET_STATUSES));
 
+export const optionalPriorityFilterValidator = () =>
+  query('priority')
+    .optional({ values: 'falsy' })
+    .bail()
+    .isString()
+    .withMessage('Priority must be a string')
+    .trim()
+    .isIn(TICKET_PRIORITIES)
+    .withMessage(enumMessage('Priority', TICKET_PRIORITIES));
+
 export const forbidStatusOnTicketBodyValidator = (context) =>
   body('status').custom((value) => {
     if (value !== undefined) {

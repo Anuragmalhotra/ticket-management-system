@@ -1,8 +1,8 @@
 # AI Usage — Documentation Phase
 
-> Tool: **Cursor (Claude)**  
-> Date: **20 July 2026**  
-> Phase: README, AI usage logs, project documentation
+> **Tool:** Cursor (Claude)  
+> **Date:** 20 July 2026  
+> **Phase:** README, AI usage logs, project documentation
 
 This document records AI prompts used to generate project documentation, including what was accepted, modified, or rejected.
 
@@ -13,22 +13,51 @@ This document records AI prompts used to generate project documentation, includi
 ### Original Prompt
 
 ```
-Generate complete README.
+Role: Technical writer producing the primary entry document for a MERN assessment repository.
 
-Include:
+Context:
+Support Ticket Management System. Assessors clone the repo and need a single README that explains
+what the project is, how it is structured, and how to run it end-to-end (DB, API, UI, tests, seed).
+Placeholder TODO README currently exists at the repo root.
 
-Project Overview
-Architecture
-Features
-Installation
-Environment Variables
-Database Setup
-Running Backend
-Running Frontend
-Running Tests
-Seed Data
-Folder Structure
-Known Limitations
+Objective:
+Replace the placeholder with a complete, accurate README that an assessor can follow without
+prior conversation context.
+
+Constraints:
+- Document this repository only — do NOT add Docker/AWS deployment guides
+- Do NOT dump internal AI prompt logs into the README (those stay under ai-prompts/)
+- Do NOT auto-populate unrelated assessment TODO markdown files in this step
+- Verify endpoint paths against the code (especially health check) before publishing
+- Keep tone practical and scannable (tables + short sections)
+
+Required sections (in a clear order):
+1. Project Overview
+2. Architecture
+3. Features
+4. Installation
+5. Environment Variables
+6. Database Setup
+7. Running Backend
+8. Running Frontend
+9. Running Tests
+10. Seed Data
+11. Folder Structure
+12. Known Limitations
+
+Assumptions:
+- Demo credentials may be listed for local assessor login (seed password)
+- Mermaid is acceptable for a high-level architecture diagram
+- Links to api-contract.md, ui-flow.md, and sub-READMEs improve navigation
+
+Acceptance criteria:
+- All 12 required sections present and accurate
+- Health endpoint path matches app.js
+- Test run commands and approximate counts included
+- Known limitations explicitly list auth/RBAC and other out-of-scope items
+- No secrets beyond intentional demo seed credentials
+
+Output format: root README.md (markdown only).
 ```
 
 ### AI Summary
@@ -67,26 +96,53 @@ README is the first document assessors read. Comprehensive setup instructions re
 ### Original Prompt
 
 ```
-Generate documentation for AI usage.
+Role: Assessment chronicler documenting responsible AI usage across the project lifecycle.
 
-Populate:
+Context:
+We need auditable AI usage logs for the Support Ticket Management System assessment.
+Prompts, summaries, and accept/modify/reject decisions must be honest and traceable to real work —
+not fabricated transcripts.
 
-planning.md
-design.md
-implementation.md
-testing.md
-debugging.md
-code-review.md
-documentation.md
+Objective:
+Populate phase-based AI usage documents under ai-prompts/ with a consistent structure so assessors
+can see how AI was used, what was kept, and what was changed or rejected.
 
-For each prompt include:
+Constraints:
+- Do NOT invent prompts that were not part of the real workflow
+- Do NOT claim 100% blind acceptance
+- Do NOT populate final-ai-usage-summary.md in this same step (separate artifact)
+- Prefer phase files over one file per micro-prompt when multiple prompts share a phase
+- For debugging/code-review that was continuous/implicit, frame issues clearly without inventing
+  fake chat history
 
-Original Prompt
-AI Summary
-Accepted
-Modified
-Rejected
-Reason
+Populate these files:
+- planning.md
+- design.md
+- implementation.md
+- testing.md
+- debugging.md
+- code-review.md
+- documentation.md
+
+For each logged prompt/issue/review include:
+1. Original Prompt
+2. AI Summary
+3. Accepted
+4. Modified
+5. Rejected
+6. Reason
+
+Assumptions:
+- Cross-links to related project artifacts improve assessor navigation
+- Phase summary metrics tables are useful at the end of each file
+
+Acceptance criteria:
+- Seven requested files exist with consistent section structure
+- Deferred/rejected items (auth, E2E, etc.) recorded honestly
+- Debugging and code-review framing matches how work actually happened
+- Cross-references to sibling docs and numbered prompt files where relevant
+
+Output format: markdown files under ai-prompts/ only.
 ```
 
 ### AI Summary
@@ -149,7 +205,7 @@ Structured AI usage logs demonstrate responsible AI practices for the assessment
 ## Human vs AI Contribution
 
 | Area | AI Generated | Human Reviewed |
-|------|-------------|--------------|
+|------|--------------|----------------|
 | Architecture docs | Primary | Accepted with modifications |
 | Source code | Primary | Reviewed via cursor rules |
 | Tests | Primary | Verified by running suite |
@@ -184,3 +240,7 @@ Structured AI usage logs demonstrate responsible AI practices for the assessment
 - [`../README.md`](../README.md)
 - [`../final-ai-usage-summary.md`](../final-ai-usage-summary.md)
 - [`./README.md`](./README.md)
+- [`./planning.md`](./planning.md)
+- [`./testing.md`](./testing.md)
+- [`./debugging.md`](./debugging.md)
+- [`./code-review.md`](./code-review.md)

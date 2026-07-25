@@ -1,8 +1,8 @@
 # AI Usage — Planning Phase
 
-> Tool: **Cursor (Claude)**  
-> Date: **20 July 2026**  
-> Phase: Requirements analysis, repository scaffolding, workflow setup
+> **Tool:** Cursor (Claude)  
+> **Date:** 20 July 2026  
+> **Phase:** Requirements analysis, repository scaffolding, workflow setup
 
 This document records AI prompts used during the planning phase of the Support Ticket Management System assessment, including what was accepted, modified, or rejected.
 
@@ -13,38 +13,47 @@ This document records AI prompts used during the planning phase of the Support T
 ### Original Prompt
 
 ```
-You are a Senior Full Stack Software Architect.
+Role: Senior Full-Stack Software Architect specializing in MERN applications.
 
-I am building a MERN Stack Support Ticket Management System for an AI Practical Assessment.
+Context:
+I am completing an AI Practical Assessment by building a Support Ticket Management System.
+Fixed stack: MongoDB, Express, React, Node.js (JavaScript, not TypeScript).
+Core scope: ticket CRUD, comments, status state machine, search/filter, validation, error handling, tests.
+Stretch (design only for now): JWT auth and RBAC.
 
-Before writing any code, analyze the following project requirements carefully.
+Objective:
+Analyze the requirements thoroughly BEFORE any implementation so we can lock scope, assumptions, and milestones.
 
-Goals:
-- Understand all functional requirements.
-- Understand all non-functional requirements.
-- Identify assumptions.
-- Identify edge cases.
-- Identify risks.
-- Suggest architecture.
-- Suggest folder structure.
-- Suggest implementation milestones.
+Constraints:
+- Do NOT generate application code, schemas, or configuration files.
+- Prefer clarity and assessor-readable structure over exhaustive enterprise architecture.
+- Call out what is in-scope vs stretch vs out-of-scope.
 
-Important:
-Do NOT generate code.
-
-Instead generate:
-1. Requirements Analysis
-2. Functional Requirements
-3. Non Functional Requirements
+Deliverables (markdown sections, in this order):
+1. Requirements Analysis (problem statement + success criteria)
+2. Functional Requirements (must-have)
+3. Non-Functional Requirements (performance, maintainability, security defaults)
 4. Assumptions
 5. Edge Cases
-6. Suggested Architecture
-7. Suggested Tech Stack
-8. Suggested Folder Structure
-9. Milestone Plan
-10. Risks and Mitigation
+6. Suggested Architecture (high level)
+7. Suggested Tech Stack (within MERN constraints)
+8. Suggested Folder Structure (monorepo)
+9. Milestone Plan (phased)
+10. Risks and Mitigations
 
-Use MongoDB, Express, React, Node.js.
+Assumptions you may use unless contradicted:
+- Single-tenant internal/helpdesk style app
+- Soft delete for tickets
+- Seed users/tickets/comments for demos and tests
+- Auth is stretch and must not block core CRUD
+
+Acceptance criteria:
+- Every functional requirement maps to a later milestone
+- Status lifecycle is identified as the primary domain “judgment” piece
+- Risks include at least: scope creep, state machine bugs, test isolation, incomplete docs
+- No code blocks containing implementation
+
+Output format: structured markdown only.
 ```
 
 ### AI Summary
@@ -81,39 +90,39 @@ The prompt explicitly requested analysis only. The phased MERN architecture alig
 ### Original Prompt
 
 ```
-Create the entire repository structure exactly as required in the assessment.
+Role: Assessment repository scaffolder for a MERN ticket-management submission.
 
-Generate every markdown file.
+Objective:
+Create the complete repository documentation tree required by the assessment checklist.
 
-Only generate headings and TODO placeholders.
+Constraints:
+- Generate folders and Markdown files only.
+- Each Markdown file must contain clear headings and TODO placeholders only.
+- Do NOT generate application code, package.json files, or filled-in content.
+- Do NOT invent extra top-level deliverables beyond the assessment list.
 
-Do not generate implementation.
+Required root Markdown files:
+README.md, candidate-info.md, requirements-analysis.md, acceptance-criteria.md,
+implementation-plan.md, design-notes.md, api-contract.md, data-model.md, ui-flow.md,
+test-strategy.md, test-results.md, debugging-notes.md, code-review-notes.md,
+review-fixes.md, reflection.md, pr-description.md, final-ai-usage-summary.md
 
-Repository should include:
+Required directories (with placeholder docs as needed):
+- database/ (schema, seed-data, setup notes)
+- ai-prompts/ (phase logs + numbered prompt files)
+- tool-specific/cursor-workflow/ (project memory for Cursor)
 
-README
-candidate-info
-requirements-analysis
-acceptance-criteria
-implementation-plan
-design-notes
-api-contract
-data-model
-ui-flow
-test-strategy
-test-results
-debugging-notes
-code-review-notes
-review-fixes
-reflection
-pr-description
-final-ai-usage-summary
+Assumptions:
+- Monorepo; client and server source will be added in later phases
+- Placeholder TODOs are intentional for candidate completion
 
-database/
-ai-prompts/
-tool-specific/cursor-workflow/
+Acceptance criteria:
+- Every listed root file exists
+- database/, ai-prompts/, and tool-specific/cursor-workflow/ exist
+- No .js/.jsx/.ts source files created in this step
+- README contains headings only (no full installation guide yet)
 
-Generate folders and markdown files only.
+Output: create the files/folders; confirm the tree in a short summary.
 ```
 
 ### AI Summary
@@ -147,23 +156,36 @@ Assessment requires a documented, auditable repo structure before coding. Placeh
 ### Original Prompt
 
 ```
-Generate the Cursor workflow documents.
+Role: Staff engineer setting up durable Cursor project memory for a MERN assessment.
 
-Create:
+Objective:
+Generate persistent workflow documents under tool-specific/cursor-workflow/ so future AI sessions inherit stable context.
 
-tool-specific/cursor-workflow/
+Create these files:
+- project-context.md — goals, stack, scope, non-goals
+- spec.md — authoritative functional/technical specification
+- tasks.md — ordered implementation checklist
+- acceptance-criteria.md — mapped pass/fail criteria
+- cursor-rules-or-instructions.md — coding standards + AI usage rules
 
-project-context.md
-spec.md
-tasks.md
-acceptance-criteria.md
-cursor-rules-or-instructions.md
+Must include:
+- Naming conventions and folder conventions
+- Layered backend architecture rules (routes → validators → controllers → services → models)
+- State machine rule: domain module only; enforce in services
+- Testing strategy (unit + mandatory state-machine integration)
+- AI usage rules: no blind acceptance, no secrets, minimal diffs, verify with tests
 
-These should serve as persistent project memory.
+Constraints:
+- Do NOT generate application code
+- Do NOT embed real secrets or production credentials
+- Keep docs concise enough for Cursor context windows
 
-Do not generate application code.
+Acceptance criteria:
+- Each file has a clear purpose statement at the top
+- Rules are actionable (do / don’t), not vague advice
+- Stretch features (auth/RBAC) are labeled as stretch
 
-Include coding standards, naming conventions, architecture rules, testing strategy and AI usage rules.
+Output: Markdown files only, then a brief index of what each file is for.
 ```
 
 ### AI Summary
@@ -199,7 +221,26 @@ Persistent project memory reduces context loss across Cursor sessions. Coding st
 ### Original Prompt
 
 ```
-Suggest me commit message for above changes
+Role: Careful git collaborator following Conventional Commits.
+
+Context:
+I just completed Mongoose model work for User, Ticket, and Comment (indexes, enums, validation, relationships, soft delete on tickets).
+
+Objective:
+Suggest ONE concise commit message for these changes.
+
+Constraints:
+- Focus on why, not a file dump
+- Prefer Conventional Commits (feat:, chore:, etc.)
+- 1–2 sentence body max
+- Do NOT run git commit or amend
+- Do NOT suggest combining unrelated changes
+
+Acceptance criteria:
+- Message would make sense to an assessor reviewing git history
+- No secrets in the message
+
+Output: commit subject + optional short body only.
 ```
 
 ### AI Summary
@@ -241,3 +282,4 @@ A clear, scoped commit message helps assessment reviewers trace incremental prog
 - [`../implementation-plan.md`](../implementation-plan.md)
 - [`../acceptance-criteria.md`](../acceptance-criteria.md)
 - [`../tool-specific/cursor-workflow/project-context.md`](../tool-specific/cursor-workflow/project-context.md)
+- [`./01-requirements-analysis.md`](./01-requirements-analysis.md)
